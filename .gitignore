@@ -1,0 +1,4 @@
+*/__pycache__/
+/src/psd_tools/
+/src/packbits.py
+/.vscode/

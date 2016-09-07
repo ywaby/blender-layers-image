@@ -30,46 +30,50 @@ import os
 from  bl_tree_view import UI_TreeView
 from  psd_tools import PSDImage
 from  psd_tools.user_api import bl_support
-from psd_tools.user_api.utils import BBox
-
+from psd_tools.user_api.psd_image import BBox
 ###### utils ##########   
-def get_layers_from_image(image, only_visible = True):
+def layers_in_image(image, only_visible = True):
     """layers = image.layers_data.layers, get type = layer only"""
     layers = image.layers_data.layers
-    if not only_visible:
-        result_layers = [layer for layer in layers if layer == "LAYER"]
-    else :
-        result_layers =[]
-        idx = 0
-        while(idx < len(layers)) :
-            layer = layers[idx]            
-            if layer.type == "GROUP_START":
-                if layer.is_visible == False:
-                    idx = UI_TreeView.get_group_end(layers, idx)
-            elif layer.type == "LAYER":      
-                if layer.is_visible == True:
-                    result_layers.append(layer)
-            idx += 1
-    return result_layers
+    real_layers = real_layers_in_layers(layers, 0, len(layers), only_visible)
+    return real_layers
 
-def get_layers_from_group(image, group_idx, only_visible =True):
+def layers_in_group(image, group_idx, only_visible =True):
     layers = image.layers_data.layers
     end_idx = UI_TreeView.get_group_end(layers, group_idx)
+    real_layers = real_layers_in_layers(layers, group_idx, end_idx, only_visible)
+    return real_layers
+
+def real_layers_in_layers(from_layers, start_idx, end_idx, only_visible =True):
     if not only_visible:
-        result_layers = [layer for layer in layers[group_idx:end_idx] if layer == "LAYER"]
+        real_layers = [layer for layer in from_layers[start_idx:end_idx+1] if layer.type == "LAYER"]
     else :
-        result_layers =[]
-        idx = group_idx
+        real_layers =[]
+        idx = start_idx
         while(idx < end_idx) :
-            layer = layers[idx]            
+            layer = from_layers[idx]            
             if layer.type == "GROUP_START":
                 if layer.is_visible == False:
-                    idx = UI_TreeView.get_group_end(layers, idx)
+                    idx = UI_TreeView.get_group_end(from_layers, idx)
             elif layer.type == "LAYER":      
                 if layer.is_visible == True:
-                    result_layers.append(layer)
+                    real_layers.append(layer)
             idx += 1
-    return result_layers
+    return real_layers
+
+def combined_position(layers):
+    x1 = [layer["position"][0] for layer in layers]   
+    y1 = [layer["position"][1] for layer in layers]    
+    x2 = [layer["position"][2] for layer in layers]   
+    y2 = [layer["position"][3] for layer in layers]         
+    return min(x1), min(y1), max(x2), max(y2)
+
+def relative_position(base_position,layer_position):
+    x1 = layer_position[0]-base_position[0]
+    y1 = layer_position[1]-base_position[1]
+    x2 = layer_position[2]-base_position[0]
+    y2 = layer_position[3]-base_position[1]
+    return x1,y1,x2,y2
 
 ###### import #####
 
@@ -78,7 +82,7 @@ def btn_import_layers_image(self, context):
 
 class ImportLayersImage(Operator, ImportHelper):
     """Impot layers image (psd)"""
-    bl_idname = "import.layers_image"  # important since its how bpy.ops.import_test.some_data is constructed
+    bl_idname = "layers_image.import"  # important since its how bpy.ops.import_test.some_data is constructed
     bl_label = "Import Image With Layers"
 
     filter_glob = StringProperty(
@@ -90,7 +94,7 @@ class ImportLayersImage(Operator, ImportHelper):
     def execute(self, context):
         import time
         start_CPU = time.clock()
-        import_layers_image(context, self.filepath)
+        import_layers_image(self.filepath)
         end_CPU = time.clock()
         self.report({'INFO'}, "%f"%(end_CPU-start_CPU)) #info window
         return {'FINISHED'}
@@ -109,14 +113,12 @@ def get_layers_from_psd(decoded_data, psd_layers, layers_data):
                 lm_layer =  layers_data.layers.add()
                 lm_layer.type = "GROUP_END"
         else :
-            # layer is layer data
+            # is real layer
             header = decoded_data.header  
             lm_layer =  layers_data.layers.add()
             lm_layer.type = "LAYER"   
             lm_layer.is_visible = layer.visible
             lm_layer.name = layer.name  
-            #bl_bbox = psd_bbox_to_bl(layer.bbox, header.height)
-            #lm_layer["position"] = [bl_bbox.x1, bl_bbox.y1, bl_bbox.x2, bl_bbox.y2]
             bbox = layer.bbox
             lm_layer["position"] = bl_support.psd_xy_to_bl(header.height, bbox.x1, bbox.y1, bbox.x2, bbox.y2 )
             layers_rd = decoded_data.layer_and_mask_data.layers
@@ -131,7 +133,7 @@ def get_layers_from_psd(decoded_data, psd_layers, layers_data):
             )
     return 
 
-def import_layers_image(context, filepath):
+def import_layers_image(filepath):
     psd = PSDImage.load(filepath)   
     name = os.path.basename(filepath)
     image = bpy.data.images.new(name, psd.header.width, psd.header.height, alpha = True )
@@ -139,10 +141,32 @@ def import_layers_image(context, filepath):
     update_image(image)
     return image
 
-###### layer manager #########    
+###### layer manager ######### 
+def new_image_from_layers(from_layers, start_idx, end_idx):    
+    real_layers = real_layers_in_layers(from_layers, start_idx, end_idx, only_visible =False)
+    c_pos = combined_position(real_layers)
+    c_bbox = BBox(c_pos[0], c_pos[1], c_pos[2], c_pos[3])
+    image_name = from_layers[start_idx].name
+    new_image = bpy.data.images.new(image_name,c_bbox.width, c_bbox.height, alpha = True )
+    new_layers = new_image.layers_data.layers    
+    for layer in from_layers[start_idx:end_idx+1]:
+        new_layer = new_layers.add()
+        new_layer.name =  layer.name
+        new_layer.group_down =  layer.group_down
+        new_layer.type =  layer.type
+        new_layer.is_visible =  layer.is_visible    
+        if layer.type == "LAYER":
+            new_layer["pixels"] =  layer["pixels"]  
+            new_layer["position"] = relative_position(c_pos,layer["position"])
+    update_image(new_image)
+    return new_image
+
+def new_image_from_group(from_layers, group_idx):
+    end_idx = UI_TreeView.get_group_end(from_layers, group_idx)    
+    return new_image_from_layers(from_layers, group_idx, end_idx)  
 
 def update_image(image):
-    layers = get_layers_from_image(image)
+    layers = layers_in_image(image)
     #filter layer
     layers = [layer for layer in layers 
                         if  layer["position"][3] -  layer["position"][1] > 0 or layer["position"][2] -  layer["position"][0]  > 0 ]   
@@ -157,7 +181,7 @@ def update_image(image):
 
 class LayerVisible(bpy.types.Operator):
     """Show/hide  layer (alt to show only)"""
-    bl_idname =  "image.layer_visible"
+    bl_idname =  "layers_image.layer_visible"
     bl_label = "Show/Hide Layer"
     bl_options = {'REGISTER', 'UNDO'} 
     layer_idx = IntProperty(default = -1)
@@ -215,10 +239,10 @@ class LayerVisible(bpy.types.Operator):
         return self.execute(context)
 
 
-class LayerOpsMenu(bpy.types.Menu):
+class LayersOpsMenu(bpy.types.Menu):
     """More layers operator"""
     bl_label = "More Operator"
-    bl_idname = "image.layer_ops_menu"
+    bl_idname = "layers_image.layer_ops_menu"
     def draw(self, context):
         layout = self.layout
         layout.operator("image.layer_visible", text="Show All Layers", icon="RESTRICT_VIEW_OFF").visible="ALL_SHOW"
@@ -244,13 +268,13 @@ class LayersPanel(bpy.types.Panel):
         row = layout.row()
         ImageList(img.layers_data.layers, row)
         col = row.column(align=True)
-        col.menu(LayerOpsMenu.bl_idname, icon='DOWNARROW_HLT', text="")
+        col.menu(LayersOpsMenu.bl_idname, icon='DOWNARROW_HLT', text="")
 
 class ImageList(UI_TreeView):
     def draw_item(self, item_layout, layer_idx, space):
         layer = self.layers[layer_idx]
         icon = 'RESTRICT_VIEW_OFF' if layer.is_visible else 'RESTRICT_VIEW_ON'
-        btn_visible = item_layout.operator("image.layer_visible", text="", emboss=False, icon=icon)
+        btn_visible = item_layout.operator(LayerVisible.bl_idname, text="", emboss=False, icon=icon)
         btn_visible.layer_idx = layer_idx
         btn_visible.visible = "HIDE" if layer.is_visible else "SHOW"
 
@@ -267,7 +291,7 @@ class ImageList(UI_TreeView):
 
 ######## data  ##########
 class ImageLayerData(bpy.types.PropertyGroup):
-    group_down = BoolProperty(name="group down", default=True)
+    group_down = BoolProperty(name="group down", default = False)
     type = EnumProperty(
             name="Move Direction",
             description="",
@@ -278,8 +302,8 @@ class ImageLayerData(bpy.types.PropertyGroup):
                    ),
             default = "LAYER"
     )
-    name = StringProperty(name="Layer Name", default="new layer")
-    is_visible = BoolProperty(name="vis tog", default=True)
+    name = StringProperty(name="Layer Name", default = "new layer")
+    is_visible = BoolProperty(name="vis tog", default = True)
     #pixels =  []
     #position = []
 

@@ -1,12 +1,16 @@
 import bpy
 import pdb
-
+import ctypes
 class UI_TreeView():
     def __init__(self, layers, layout):
         self.layers = layers
         self.draw(layout)
+    
+    def draw_item(self, item_layout : "layout to draw tree item", item_idx : "item index in tree", space : "item space "):
+        pass
+    
+    def draw(self, layout:"layout to draw tree view"):
 
-    def draw(self, layout):
         layers = self.layers
         space = 0
         box = layout.box()
@@ -27,6 +31,7 @@ class UI_TreeView():
                 row = box.row(align=True)
                 self.draw_item(row,idx,space)  
             idx+=1
+    
     @staticmethod
     def get_group_end(layers, start_idx):
         group_layer = 1

@@ -254,9 +254,9 @@ class LayersOpsMenu(bpy.types.Menu):
     bl_idname = "layers_image.layer_ops_menu"
     def draw(self, context):
         layout = self.layout
-        layout.operator("image.layer_visible", text="Show All Layers", icon="RESTRICT_VIEW_OFF").visible="ALL_SHOW"
-        layout.operator("image.layer_visible", text="Hide All Layers", icon="RESTRICT_VIEW_ON").visible="ALL_HIDE"
-        layout.operator("image.layer_visible", text="Invert All Layers", icon="RESTRICT_VIEW_OFF").visible="ALL_INVERT"
+        layout.operator(LayerVisible.bl_idname, text="Show All Layers", icon="RESTRICT_VIEW_OFF").visible="ALL_SHOW"
+        layout.operator(LayerVisible.bl_idname, text="Hide All Layers", icon="RESTRICT_VIEW_ON").visible="ALL_HIDE"
+        layout.operator(LayerVisible.bl_idname, text="Invert All Layers", icon="RESTRICT_VIEW_OFF").visible="ALL_INVERT"
 
 class LayersPanel(bpy.types.Panel):
     bl_space_type = 'IMAGE_EDITOR'

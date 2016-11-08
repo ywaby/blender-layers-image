@@ -38,13 +38,14 @@ def layers_in_image(image, only_visible = True):
     real_layers = real_layers_in_layers(layers, 0, len(layers), only_visible)
     return real_layers
 
-def layers_in_group(image, group_idx, only_visible =True):
+def layers_in_group(image, group_idx, only_visible = True):
     layers = image.layers_data.layers
     end_idx = UI_TreeView.get_group_end(layers, group_idx)
     real_layers = real_layers_in_layers(layers, group_idx, end_idx, only_visible)
     return real_layers
 
-def real_layers_in_layers(from_layers, start_idx, end_idx, only_visible =True):
+def real_layers_in_layers(from_layers, start_idx, end_idx, only_visible = True):
+    '''get real image data layer form layers'''
     if not only_visible:
         real_layers = [layer for layer in from_layers[start_idx:end_idx+1] if layer.type == "LAYER"]
     else :
@@ -84,19 +85,13 @@ class ImportLayersImage(Operator, ImportHelper):
     """Impot layers image (psd)"""
     bl_idname = "layers_image.import"  # important since its how bpy.ops.import_test.some_data is constructed
     bl_label = "Import Image With Layers"
-
     filter_glob = StringProperty(
             default="*.psd",
             options={'HIDDEN'},
             maxlen=255,  # Max internal buffer length, longer would be clamped.
             )
-
     def execute(self, context):
-        import time
-        start_CPU = time.clock()
         import_layers_image(self.filepath)
-        end_CPU = time.clock()
-        self.report({'INFO'}, "%f"%(end_CPU-start_CPU)) #info window
         return {'FINISHED'}
 
 
@@ -133,10 +128,29 @@ def get_layers_from_psd(decoded_data, psd_layers, layers_data):
             )
     return 
 
+
+def exist_image_from_path(filepath):
+    for image in bpy.data.images:
+        if image.filepath == filepath:return image
+    return None
+
 def import_layers_image(filepath):
+    image = exist_image_from_path(filepath)
+    if image:
+        return update_image_from_psd(image,filepath)
     psd = PSDImage.load(filepath)   
     name = os.path.basename(filepath)
     image = bpy.data.images.new(name, psd.header.width, psd.header.height, alpha = True )
+    get_layers_from_psd(psd.decoded_data, psd.layers, image.layers_data )
+    update_image(image)
+    image.filepath = filepath
+    return image 
+
+def update_image_from_psd(image, filepath):
+    psd = PSDImage.load(filepath)   
+    image.generated_height=psd.header.height
+    image.generated_width=psd.header.width
+    image.layers_data.layers.clear()
     get_layers_from_psd(psd.decoded_data, psd.layers, image.layers_data )
     update_image(image)
     return image
@@ -178,13 +192,12 @@ def update_image(image):
         bl_support.layer_nor_mix(layer["pixels"], layer_bbox, base_pixels, base_bbox )
     image.pixels = base_pixels
 
-
 class LayerVisible(bpy.types.Operator):
     """Show/hide  layer (alt to show only)"""
     bl_idname =  "layers_image.layer_visible"
     bl_label = "Show/Hide Layer"
     bl_options = {'REGISTER', 'UNDO'} 
-    layer_idx = IntProperty(default = -1)
+    layer_idx = IntProperty(default = -1) 
     has_alt = BoolProperty(options={'SKIP_SAVE'})
     visible = EnumProperty(
             name="visible Set",
@@ -208,29 +221,25 @@ class LayerVisible(bpy.types.Operator):
         layer_idx = self.layer_idx      
         layer = layers[layer_idx]    
         if  self.has_alt:
-            for idx in range(len(layers)):
-                bpy.ops.image.layer_visible(layer_idx = idx, visible = "HIDE")
-            bpy.ops.image.layer_visible(layer_idx = layer_idx, visible = "SHOW")
-            return {'FINISHED'}
+            for lyer in layers:
+                lyer.is_visible = False
+            layer.is_visible = True
         if self.visible == "ALL_SHOW":
-            for idx in range(len(layers)):
-                bpy.ops.image.layer_visible(layer_idx = idx, visible =  "SHOW") 
-            return {'FINISHED'}
+            for lyer in layers:
+                lyer.is_visible = True
         elif self.visible == "ALL_HIDE":
-            for idx in range(len(layers)):
-                bpy.ops.image.layer_visible(layer_idx = idx, visible =  "HIDE") 
-            return {'FINISHED'} 
+            for lyer in layers:
+                lyer.is_visible = False
         elif self.visible == "ALL_INVERT":
-            for idx in range(len(layers)):
-                bpy.ops.image.layer_visible(layer_idx = idx, visible =  "INVERT") 
-            return {'FINISHED'}          
+            for lyer in layers:
+                lyer.is_visible = False        
         elif self.visible == "SHOW":
-            is_visible = True
+            layer.is_visible = True
         elif self.visible == "HIDE":
-            is_visible = False
+            layer.is_visible = False
         elif self.visible == "INVERT":
-            is_visible = False if layer.is_visible == True else True            
-        layer.is_visible = is_visible
+            layer.is_visible = not layer.is_visible        
+
         update_image(image)     
         return {'FINISHED'}
 
@@ -325,6 +334,3 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-
-
-

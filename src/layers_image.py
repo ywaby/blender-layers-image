@@ -213,7 +213,10 @@ class LayerVisible(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         sima = context.space_data
-        return (sima.image and sima.image.layers_data.layers ) 
+        return (sima.type == 'IMAGE_EDITOR' and
+                sima.image and 
+                sima.image.layers_data.layers 
+                ) 
 
     def execute(self, context):
         image = context.space_data.image    

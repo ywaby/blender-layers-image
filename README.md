@@ -13,9 +13,13 @@ blender 2.77
 psd cc2015
 
 ## roadmap
-使用c/c++
+使用numpy
+doc
+formatter
+bl_psd_tools git
+github
+
 psd透明度等图层样式
-支持xef.tiff格式
 psd更多格式
 支持图层样式
 支持更多的操作：放大缩小，裁剪等

@@ -100,7 +100,7 @@ class ImportLayersImage(Operator, ImportHelper):
 
     def execute(self, context):
         import time
-        start_CPU = time.clock()
+        start_CPU = time.clock()# test time
         img = import_layers_image(self.filepath)
         end_CPU = time.clock()
         print("Method 1: %f CPU seconds" % (end_CPU - start_CPU))
@@ -146,6 +146,7 @@ def get_layers_from_psd(decoded_data, psd_layers, layers_data):
 
 
 def exist_image_from_path(filepath):
+    '''had import image or not'''
     for image in bpy.data.images:
         if image.filepath == filepath:
             return image
@@ -153,6 +154,7 @@ def exist_image_from_path(filepath):
 
 
 def import_layers_image(filepath):
+    '''import image with layers(.psd)'''
     image = exist_image_from_path(filepath)
     if image:
         return update_image_from_psd(image, filepath)

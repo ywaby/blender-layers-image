@@ -31,6 +31,8 @@ from bl_tree_view import UI_TreeView
 from psd_tools import PSDImage
 from psd_tools.user_api import bl_support
 from psd_tools.user_api.psd_image import BBox
+
+import numpy
 ###### utils ##########
 
 def layers_in_image(image, only_visible=True):
@@ -134,14 +136,15 @@ def get_layers_from_psd(decoded_data, psd_layers, layers_data):
                 header.height, bbox.x1, bbox.y1, bbox.x2, bbox.y2)
             layers_rd = decoded_data.layer_and_mask_data.layers
             layer_rd = layers_rd.layer_records[layer._index]
-            lm_layer["pixels"] = bl_support.channels_to_bl_pixels(
-                channels=layers_rd.channel_image_data[layer._index],
-                channel_ids=bl_support._get_layer_channel_ids(layer_rd),
-                width=layer_rd.width(),
-                height=layer_rd.height(),
-                depth=header.depth,
+            
+            bl_channels = psd_layer_to_bl_rgba(
+                layers_rd.channel_image_data[layer_idx],
+                bl_support._get_layer_channel_ids(layer_rd),
+                header.depth,
+                layer_rd.bbox(),
                 target_has_alpha=True
             )
+            lm_layer["pixels"] = bl_channels.tolist()
     return
 
 
@@ -213,13 +216,12 @@ def update_image(image):
     layers = [layer for layer in layers
               if layer["position"][3] - layer["position"][1] > 0 or layer["position"][2] - layer["position"][0] > 0]
     base_bbox = BBox(0, 0, image.size[0], image.size[1])
-    base_pixels = [0.0, 0.0, 0.0, 0.0] * image.size[0] * image.size[1]
+    base_channels = np.ones((4, base_bbox.height, base_bbox.width))
+    base_channels[3]=0
     for layer in reversed(layers):
         layer_bbox = BBox(layer["position"][0], layer["position"][1], layer["position"][2], layer["position"][3])
-        bl_support.layer_nor_mix(
-            layer["pixels"], layer_bbox, base_pixels, base_bbox)
-    image.pixels = base_pixels
-
+        bl_layers_nor_mix(base_channels, base_bbox, layer_channels, layer.bbox())
+    image.pixels =  bl_rgba_mix(base_channels)
 
 class LayerVisible(bpy.types.Operator):
     """Show/hide  layer (alt to show only)"""

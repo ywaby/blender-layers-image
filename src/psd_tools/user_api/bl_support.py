@@ -83,17 +83,17 @@ def layer_to_bl_image(decoded_data, layer_idx, image=None):
     header = decoded_data.header
     layers = decoded_data.layer_and_mask_data.layers
     layer = layers.layer_records[layer_idx]
-
+    layer_bbox = BBox(layer.left, layer.top, layer.right, layer.bottom)
     bl_channels = psd_layer_to_bl_rgba(
         layers.channel_image_data[layer_idx],
         _get_layer_channel_ids(layer),
         header.depth,
-        layer.bbox(),
+        layer_bbox,
         image.use_alpha if image else True
     )
     pixels = bl_rgba_mix(bl_channels)
     if not image:
-        image = bpy.data.images.new(layer.name, layer.width, layer.height, alpha=True)
+        image = bpy.data.images.new(layer.name, layer.width(), layer.height(), alpha=True)
     image.pixels = pixels
     return image
 
@@ -124,16 +124,17 @@ def layers_to_bl_image(decoded_data, layer_idxs, image_name, image=None):
     mix_channels[3]=0
     for layer_idx in layer_idxs:
         layer = layers_rd[layer_idx]
+        layer_bbox = BBox(layer.left, layer.top, layer.right, layer.bottom)
         if layer.blend_mode != b'norm':
             raise Exception("layer {0:s} :{1:d} type = {2:b} unsupport".format(layer.name, layer_idx, layer.blend_mode))
         layer_channels = psd_layer_to_bl_rgba(
             layers_and_mask.channel_image_data[layer_idx],
             _get_layer_channel_ids(layer),
             header.depth,
-            layer.bbox(),
+            layer_bbox,
             image.use_alpha if image else True
         )
-        bl_layers_nor_mix(mix_channels, mix_bbox, layer_channels, layer.bbox())
+        bl_layers_nor_mix(mix_channels, mix_bbox, layer_channels, layer_bbox)
     pixels = bl_rgba_mix(mix_channels)
     if not image:
         image = bpy.data.images.new(
@@ -192,15 +193,22 @@ def bl_layers_nor_mix(base_layer, base_bbox, up_layer, up_bbox):
 
 def bl_rgba_mix(bl_channels):
     '''blender layers data rgba mix get image pixels'''
+    import time
+    start_CPU = time.clock()# test time
     bl_channel_R, bl_channel_G, bl_channel_B, bl_channel_A = bl_channels
     bl_channel_R = bl_channel_R.ravel()
     bl_channel_G = bl_channel_G.ravel()
     bl_channel_B = bl_channel_B.ravel()
     bl_channel_A = bl_channel_A.ravel()
-    pixels = numpy.ravel(
-        (bl_channel_R, bl_channel_G, bl_channel_B, bl_channel_A), order='F')
-    return pixels.tolist()
 
+    pixels = numpy.ravel((bl_channel_R, bl_channel_G, bl_channel_B, bl_channel_A), order='F')
+    end_CPU = time.clock()
+    print("rgba mix time 1: %f CPU seconds" % (end_CPU - start_CPU))
+    start_CPU = time.clock()# test time
+    pixels2=pixels.tolist()
+    end_CPU = time.clock()
+    print("rgba mix time 2: %f CPU seconds" % (end_CPU - start_CPU))
+    return pixels2
 
 def psd_layer_to_bl_rgba(layer_channels, channel_ids, depth, bbox, target_has_alpha):
     ''' psd channels_data to blender  layers data(rgba)

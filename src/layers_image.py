@@ -136,15 +136,15 @@ def get_layers_from_psd(decoded_data, psd_layers, layers_data):
                 header.height, bbox.x1, bbox.y1, bbox.x2, bbox.y2)
             layers_rd = decoded_data.layer_and_mask_data.layers
             layer_rd = layers_rd.layer_records[layer._index]
-            
-            bl_channels = psd_layer_to_bl_rgba(
-                layers_rd.channel_image_data[layer_idx],
+            layer_bbox = BBox(layer_rd.left, layer_rd.top, layer_rd.right, layer_rd.bottom)
+            bl_channels = bl_support.psd_layer_to_bl_rgba(
+                layers_rd.channel_image_data[layer._index],
                 bl_support._get_layer_channel_ids(layer_rd),
                 header.depth,
-                layer_rd.bbox(),
+                layer_bbox,
                 target_has_alpha=True
             )
-            lm_layer["pixels"] = bl_channels.tolist()
+            lm_layer["channels"] = bl_channels.tolist()
     return
 
 
@@ -199,7 +199,7 @@ def new_image_from_layers(from_layers, start_idx, end_idx):
         new_layer.type = layer.type
         new_layer.is_visible = layer.is_visible
         if layer.type == "LAYER":
-            new_layer["pixels"] = layer["pixels"]
+            new_layer["channels"] = layer["channels"]
             new_layer["position"] = relative_position(c_pos, layer["position"])
     update_image(new_image)
     return new_image
@@ -209,19 +209,33 @@ def new_image_from_group(from_layers, group_idx):
     end_idx = UI_TreeView.get_group_end(from_layers, group_idx)
     return new_image_from_layers(from_layers, group_idx, end_idx)
 
+def read_one_by_one(pixels):
+    x=0
+    for px in pixels:
+        x=x+px
 
 def update_image(image):
+    ''' update layer image from its layers data
+    '''
     layers = layers_in_image(image)
     # filter layer
     layers = [layer for layer in layers
               if layer["position"][3] - layer["position"][1] > 0 or layer["position"][2] - layer["position"][0] > 0]
     base_bbox = BBox(0, 0, image.size[0], image.size[1])
-    base_channels = np.ones((4, base_bbox.height, base_bbox.width))
+    base_channels = numpy.ones((4, base_bbox.height, base_bbox.width))
     base_channels[3]=0
+    import time
+    start_CPU = time.clock()# test time     
     for layer in reversed(layers):
         layer_bbox = BBox(layer["position"][0], layer["position"][1], layer["position"][2], layer["position"][3])
-        bl_layers_nor_mix(base_channels, base_bbox, layer_channels, layer.bbox())
-    image.pixels =  bl_rgba_mix(base_channels)
+        layer_channels =  numpy.array(layer["channels"])
+        bl_support.bl_layers_nor_mix(base_channels, base_bbox,layer_channels, layer_bbox)    
+    end_CPU = time.clock()
+    print("bl_layers_nor_mix time : %f CPU seconds" % (end_CPU - start_CPU))    
+    start_CPU = time.clock()# test time     
+    image.pixels[:] = bl_support.bl_rgba_mix(base_channels)
+    end_CPU = time.clock()
+    print("bl_rgba_mix time : %f CPU seconds" % (end_CPU - start_CPU))
 
 class LayerVisible(bpy.types.Operator):
     """Show/hide  layer (alt to show only)"""

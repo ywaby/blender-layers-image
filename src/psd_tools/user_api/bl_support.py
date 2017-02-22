@@ -185,30 +185,18 @@ def bl_layers_nor_mix(base_layer, base_bbox, up_layer, up_bbox):
     mix_channel_B = up_channel_B * up_channel_A + dn_channel_B * \
         dn_channel_A - dn_channel_B * dn_channel_A * up_channel_A
     mix_channel_A = up_channel_A + dn_channel_A - dn_channel_A * up_channel_A
-    base_layer[:, 
-    up_bbox.y1 - base_bbox.y1:up_bbox.y2 - base_bbox.y1, 
-    up_bbox.x1 - base_bbox.x1:up_bbox.x2 - base_bbox.x1] = [mix_channel_R, mix_channel_G, mix_channel_B, mix_channel_A]
+    base_layer[:,
+        up_bbox.y1 - base_bbox.y1:up_bbox.y2 - base_bbox.y1,
+        up_bbox.x1 - base_bbox.x1:up_bbox.x2 - base_bbox.x1] = mix_channel_R, mix_channel_G, mix_channel_B, mix_channel_A
     return
 
 
 def bl_rgba_mix(bl_channels):
     '''blender layers data rgba mix get image pixels'''
-    import time
-    start_CPU = time.clock()# test time
-    bl_channel_R, bl_channel_G, bl_channel_B, bl_channel_A = bl_channels
-    bl_channel_R = bl_channel_R.ravel()
-    bl_channel_G = bl_channel_G.ravel()
-    bl_channel_B = bl_channel_B.ravel()
-    bl_channel_A = bl_channel_A.ravel()
-
-    pixels = numpy.ravel((bl_channel_R, bl_channel_G, bl_channel_B, bl_channel_A), order='F')
-    end_CPU = time.clock()
-    print("rgba mix time 1: %f CPU seconds" % (end_CPU - start_CPU))
-    start_CPU = time.clock()# test time
-    pixels2=pixels.tolist()
-    end_CPU = time.clock()
-    print("rgba mix time 2: %f CPU seconds" % (end_CPU - start_CPU))
-    return pixels2
+    size = bl_channels[0].size
+    channels_2D = bl_channels.reshape((4,size))
+    pixels = numpy.ravel(channels_2D, order='F')
+    return pixels.tolist()
 
 def psd_layer_to_bl_rgba(layer_channels, channel_ids, depth, bbox, target_has_alpha):
     ''' psd channels_data to blender  layers data(rgba)

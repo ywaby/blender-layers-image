@@ -101,13 +101,7 @@ class ImportLayersImage(Operator, ImportHelper):
         default="*.psd", options={'HIDDEN'}, maxlen=255)
 
     def execute(self, context):
-        import time
-        start_CPU = time.clock()# test time
         img = import_layers_image(self.filepath)
-        end_CPU = time.clock()
-        print("Method 1: %f CPU seconds" % (end_CPU - start_CPU))
-        message = "import layer image cost: %f CPU seconds" % (end_CPU - start_CPU)
-        self.report({'INFO'}, message)
         img.pack(as_png=True)
         return {'FINISHED'}
 
@@ -158,6 +152,8 @@ def exist_image_from_path(filepath):
 
 def import_layers_image(filepath):
     '''import image with layers(.psd)'''
+    import time
+    start_CPU = time.clock()# test time     
     image = exist_image_from_path(filepath)
     if image:
         return update_image_from_psd(image, filepath)
@@ -167,7 +163,12 @@ def import_layers_image(filepath):
         name, psd.header.width, psd.header.height, alpha=True)
     get_layers_from_psd(psd.decoded_data, psd.layers, image.layers_data)
     image.filepath = filepath
+    end_CPU = time.clock()# test time     
+    print("import data time : %f CPU seconds" % (end_CPU - start_CPU))
+    start_CPU = time.clock()# test time     
     update_image(image)
+    end_CPU = time.clock()# test time     
+    print("update time : %f CPU seconds" % (end_CPU - start_CPU))
     return image
 
 

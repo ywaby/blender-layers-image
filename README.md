@@ -1,26 +1,18 @@
-# 功能
+blender image with layers 
+## 简介
+import from .psd file,and layers image simple control
 
-blender 图层图像文件的导入和图层的基本操作
-基于psd_tools和packbit项目
-
-![功能效果图gif]()
-
+### base project
+- psd_tools
+- packbit
+### supported file type
+.psd file: 8 bit depth and rgba.
+layer style: only normal layer.
+### usage
+![import](doc/import.jpg)
+![manager](doc/manager.jpg)
 
 ## FQA
-### 速度慢
-使用小尺寸的图片
-### 图片格式
-8位RGB格式psd
-不支持图层样式
+### operate costs a lots time
+as python is low efficiency,use small image please.
 
-### 测试
-blender 2.78
-psd cc2017
-
-## roadmap
-- doc
-- github
-- psd更多格式16bit cmky等
-- 支持图层样式
-- 支持更多的操作：放大缩小，裁剪等
-## 参考

@@ -16,7 +16,7 @@ layer style: only normal layer.
 - image import
 - visiable control
 
-<video src="doc/usage.ogg" controls="controls" autoplay = "autoplay" loop="loop"/>
+![usage](doc/usage.gif)
 
 ## FQA
 ### operate costs a lots time

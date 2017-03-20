@@ -13,8 +13,10 @@ project base on MIT license.
 layer style: only normal layer.
 
 ### usage
-![import](doc/import.jpg)
-![manager](doc/manager.jpg)
+- image import
+- visiable control
+
+<video src="doc/usage.ogv" controls="controls" autoplay = "autoplay" loop="loop"/>
 
 ## FQA
 ### operate costs a lots time

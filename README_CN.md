@@ -11,8 +11,9 @@ blender 图片支持图层.
 ### 使用
 - 图层文件导入
 - 图层visiable控制
-![import](doc/import.jpg)
-![manager](doc/manager.jpg)
+
+<video src="doc/usage.ogv" controls="controls" autoplay = "autoplay" loop="loop"/>
+
 
 ### 图片格式
 文件：8位RGBA格式 .psd

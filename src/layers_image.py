@@ -1,5 +1,5 @@
 bl_info = {
-    "name": "image_layers",
+    "name": "layers_image",
     "author": "ywaby",
     "version": (0, 0, 1),
     "blender": (2, 77),

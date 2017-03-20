@@ -1,3 +1,9 @@
+'''
+part of project bl_layers_image(https://github.com/ywaby/blender-layers-image)
+Copyright (c) <2017> <ywaby@163.com>
+This code is distributed under the MIT License. 
+'''
+
 import bpy
 import pdb
 import ctypes

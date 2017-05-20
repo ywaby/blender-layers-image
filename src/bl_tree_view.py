@@ -1,52 +1,50 @@
-'''
-part of project bl_layers_image(https://github.com/ywaby/blender-layers-image)
-Copyright (c) <2017> <ywaby@163.com>
-This code is distributed under the MIT License. 
-'''
+# part of project bl_layers_image(https://github.com/ywaby/blender-layers-image)
+# Copyright (c) 2017 ywaby@163.com
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
 
-import bpy
-import pdb
-import ctypes
+
 class UI_TreeView():
-    def __init__(self, layers, layout):
-        self.layers = layers
-        self.draw(layout)
-    
-    def draw_item(self, item_layout : "layout to draw tree item", item_idx : "item index in tree", space : "item space "):
-        pass
-    
-    def draw(self, layout:"layout to draw tree view"):
+    """data struct ref layers image"""
+    def __init__(self, tree):
+        self.tree = tree
 
-        layers = self.layers
-        space = 0
+    def draw_item(self,
+                  item,
+                  item_layout: "layout to draw tree item",
+                  item_idx: "item index in tree",
+                  indent: "item indent"):
+        pass
+
+    def draw(self, layout: "layout to draw tree view"):
+        tree = self.tree
+        indent = 0
         box = layout.box()
-        #for layer in layers:  
         idx = 0
-        while(idx < len(layers)) :
-            layer = layers[idx]
-            if layer.type == "GROUP_START":
+        while idx < len(tree):
+            item = tree[idx]
+            if item.type == "GROUP_START":
                 row = box.row(align=True)
-                self.draw_item(row,idx,space)
-                if layer.group_down == False:
-                    idx = self.get_group_end(layers, idx)
-                else :
-                    space += 1
-            elif layer.type == "GROUP_END":
-                space -= 1       
-            elif layer.type == "LAYER":      
+                self.draw_item(item, row, idx, indent)
+                if item.group_expand  is False:
+                    idx = self.get_group_end_idx(idx)
+                else:
+                    indent += 1
+            elif item.type == "GROUP_END":
+                indent -= 1
+            elif item.type == "LAYER":
                 row = box.row(align=True)
-                self.draw_item(row,idx,space)  
-            idx+=1
-    
-    @staticmethod
-    def get_group_end(layers, start_idx):
+                self.draw_item(item, row, idx, indent)
+            idx += 1
+
+    def get_group_end_idx(self, start_idx: "GROUP_START idx"):
         group_layer = 1
-        for idx in range(start_idx+1, len(layers)):
-            layer = layers[idx]
-            if layer.type == "GROUP_START":
-                group_layer+=1
-            elif layer.type == "GROUP_END":
-                group_layer-=1
+        for idx in range(start_idx + 1, len(self.tree)):
+            item = self.tree[idx]
+            if item.type == "GROUP_START":
+                group_layer += 1
+            elif item.type == "GROUP_END":
+                group_layer -= 1
             if group_layer == 0:
-                return idx                
-        return None
+                return idx
+        return

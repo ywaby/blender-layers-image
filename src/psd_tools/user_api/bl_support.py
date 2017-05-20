@@ -2,6 +2,8 @@
 """
 import array
 import warnings
+import collections
+import numpy
 from psd_tools.utils import fix_byteorder
 from psd_tools.constants import Compression, ChannelID, ColorMode
 try:
@@ -9,9 +11,6 @@ try:
     import bpy
 except ImportError:
     pass
-import collections
-import numpy
-
 
 class BBox(collections.namedtuple('BBox', 'x1, y1, x2, y2')):
 
@@ -157,11 +156,12 @@ def array_from_raw(data, depth):
 
 
 def channel_decode(channel, depth, width, height):
-    '''psd channel data to full list data 
-    [
-        [line]
-        [line]
-    ]
+    '''psd channel data to full list data
+    [psd channel] ->    [
+                            [line]
+                            [line]
+                            ...
+                        ]
     '''
     channel_data = packbits.decode(
         channel.data) if channel.compression == Compression.PACK_BITS else channel.data
@@ -172,7 +172,7 @@ def channel_decode(channel, depth, width, height):
 
 
 def bl_layers_nor_mix(base_layer, base_bbox, up_layer, up_bbox):
-    '''blender layers normal mix'''
+    '''blender layers normal mix to base_layer'''
     dn_channels = base_layer[:,
                             up_bbox.y1 - base_bbox.y1:up_bbox.y2 - base_bbox.y1,
                             up_bbox.x1 - base_bbox.x1:up_bbox.x2 - base_bbox.x1]
@@ -200,10 +200,12 @@ def bl_rgba_mix(bl_channels):
 
 def psd_layer_to_bl_rgba(layer_channels, channel_ids, depth, bbox, target_has_alpha):
     ''' psd channels_data to blender  layers data(rgba)
-    [[r],
-    [g],
-    [b],
-    [a]]
+    [
+        [r channel],
+        [g channel],
+        [b channel],
+        [a channel]
+    ]
     '''
     width = bbox.width
     height = bbox.height
